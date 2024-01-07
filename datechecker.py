@@ -10,8 +10,8 @@ from sympy import true
 
 
 class FilesManager():
-    temporary_dirs = ["C:/Windows/SoftwareDistribution/Download/",
-                      "C:/Users/ACER/AppData/Local/Temp/", "C:/Windows/Temp/"]
+    temporary_dirs = ["C:/Users/ACER/AppData/Local/Temp/",
+                      "C:/Windows/Temp/", "C:/Windows/Prefetch/"]
 
     def __init__(self, temporary=0):
         "Add list of temporary files location you want to manipulate."
@@ -66,13 +66,15 @@ class FilesManager():
         for old_file in path:
             print(old_file)
 
-    def log_action(self, info, path):
+    def log_action(self, info):
         current_date = datetime.datetime.now()
         log_file_name = f'log-{current_date.year}-{current_date.month}-{current_date.day}.txt'
-        log_path = path+"logs/"
+        log_path = os.path.join(os.getcwd(), "logs")
         if not os.path.exists(log_path):
             os.mkdir(log_path)
-        log_file = open(f'{log_path}{log_file_name}', '+a')
+            info = f'{log_path} Created'
+            self.log_action(info)
+        log_file = open(f'{log_path}/{log_file_name}', '+a')
         log_file.write(f'{info}'+"\n")
         log_file.close()
 
@@ -86,13 +88,13 @@ class OrganizeFiles(FilesManager):
     spread_sheet_extension = ['.xls', '.xlsx', '.csv']
     power_point_extension = ['.ppt', '.pptx']
 
-    def __move(self, src, dist, path):
+    def __move(self, src, dist):
         try:
             shutil.move(src, dist)
-            self.log_action(f'{src} moved to {dist}', path)
+            self.log_action(f'{src} moved to {dist}')
         except Exception as e:
             print(f'{e}')
-            self.log_action(e, path)
+            self.log_action(e)
 
     def manage_by_extension(self, path):
         extension = self.get_extension(path)
@@ -101,41 +103,47 @@ class OrganizeFiles(FilesManager):
         for i in range(len(new_path)):
             if not os.path.exists(path+new_path[i]):
                 os.makedirs(path+new_path[i])
+                info = f'{path+new_path[i]} Created'
+                self.log_action(info)
             new_path[i] = path+new_path[i]
         print(new_path)
         for x in extension:
             z = "".join(x)
             if x[1] in self.text_extension:
-                self.__move(path+z, new_path[0], path)
+                self.__move(path+z, new_path[0])
             elif x[1] in self.image_extension:
-                self.__move(path+z, new_path[1], path)
+                self.__move(path+z, new_path[1])
             elif x[1] in self.audio_extension:
-                self.__move(path+z, new_path[2], path)
+                self.__move(path+z, new_path[2])
             elif x[1] in self.markup_extension:
-                self.__move(path+z, new_path[3], path)
+                self.__move(path+z, new_path[3])
             elif x[1] in self.video_extension:
-                self.__move(path+z, new_path[4], path)
+                self.__move(path+z, new_path[4])
             elif x[1] in self.spread_sheet_extension:
-                self.__move(path+z, new_path[5], path)
+                self.__move(path+z, new_path[5])
             elif x[1] in self.power_point_extension:
-                self.__move(path+z, new_path[6], path)
+                self.__move(path+z, new_path[6])
 
 
 class HandleTempFiles(FilesManager):
-    def __delete(self, info, old_file, type, path):
+    def __delete(self, info, old_file, type):
         try:
             if type == 'file':
                 os.remove(old_file)
             elif type == 'directory':
-                os.rmdir(old_file)
-            self.log_action(info, path)
+                if (len(os.listdir(old_file)) == 0):
+                    os.rmdir(old_file)
+                else:
+                    shutil.rmtree(old_file)
+            self.log_action(info)
         except OSError as e:
             print(e)
-            self.log_action(e, path)
+            self.log_action(e)
 
     def delete_temp_files(self):
         days = int(input("How old files to be deleted (days): \n"))
         paths = self.temporary_dirs
+        # paths = ["E:/Rajib/Python/learn python/Automation/dummy folder/Text Files/"]
         for path in paths:
             old_file_path = self.get_old_files(path, days)
             if len(old_file_path) == 0:
@@ -151,9 +159,13 @@ class HandleTempFiles(FilesManager):
                     for old_file in old_file_path:
                         info = f'{old_file} is deleted'
                         if os.path.isfile(old_file):
-                            self.__delete(info, old_file, "file", path)
+                            self.__delete(info, old_file, "file")
                         elif os.path.isdir(old_file):
-                            self.__delete(info, old_file, "directory", path)
+                            if len(os.listdir(old_file)) == 0:
+                                self.__delete(info, old_file, "directory")
+                            else:
+                                info = f'Files and Sub directory in {old_file} Deleted'
+                                self.__delete(info, old_file, "directory")
                         temp.pop(0)
                 elif confirm == "N" or confirm == "NO":
                     print("Action Cancelled!!!\n")
