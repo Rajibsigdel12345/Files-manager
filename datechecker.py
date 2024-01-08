@@ -2,11 +2,9 @@
 import datetime
 import glob
 import os
+import re
 import shutil
 import time
-
-
-from sympy import true
 
 
 class FilesManager():
@@ -43,14 +41,20 @@ class FilesManager():
         time_in_days = time_in_hours/24
         return time_in_days, time_in_hours
 
-    def get_old_files(self, path, days):
+    def get_old_files(self, path, days, exclusion=False):
         old_files = []
-        for files in os.listdir(path):
+        print("path: "+path)
+        files = glob.glob(path+'*')
+        print("files: ", files)
+        if exclusion:
+            for exclude in exclusion:
+                files = list(set(files)-set(glob.glob(f'{path}*.{exclude}')))
+        for file in files:
             c = glob.glob(f'{path}logs')
-            if path+files not in c:
-                time_in_days, time_in_hours = self.get_timediff(path+files)
+            if file not in c:
+                time_in_days, time_in_hours = self.get_timediff(file)
                 if time_in_days > days:
-                    old_files.append(path+files)
+                    old_files.append(file)
         return old_files
 
     def get_extension(self, path):
@@ -99,7 +103,15 @@ class OrganizeFiles(FilesManager):
     def manage_by_extension(self, path):
         extension = self.get_extension(path)
         new_path = ['Text Files', 'Image Files', 'Audio Files',
-                    'Markup Files', 'Video Files', 'Spread Sheets', 'Powerpoint Files']
+                    'Markup Files', 'Video Files', 'Spread Sheets', 'Powerpoint Files', "Miscellenous"]
+        flag = input(
+            "\nDo you want to exclude any file type(s) to organize(Y/N): ").lower()
+        if flag == "y" or flag == 'YES':
+            exclude = input("\nEnter extension you want to exclude: ")
+            exclude = re.split('\s|,', exclude)
+            for i in range(len(exclude)):
+                exclude[i] = '.'+exclude[i]
+            print(exclude)
         for i in range(len(new_path)):
             if not os.path.exists(path+new_path[i]):
                 os.makedirs(path+new_path[i])
@@ -108,21 +120,25 @@ class OrganizeFiles(FilesManager):
             new_path[i] = path+new_path[i]
         print(new_path)
         for x in extension:
+            print("x1", x[1])
             z = "".join(x)
-            if x[1] in self.text_extension:
-                self.__move(path+z, new_path[0])
-            elif x[1] in self.image_extension:
-                self.__move(path+z, new_path[1])
-            elif x[1] in self.audio_extension:
-                self.__move(path+z, new_path[2])
-            elif x[1] in self.markup_extension:
-                self.__move(path+z, new_path[3])
-            elif x[1] in self.video_extension:
-                self.__move(path+z, new_path[4])
-            elif x[1] in self.spread_sheet_extension:
-                self.__move(path+z, new_path[5])
-            elif x[1] in self.power_point_extension:
-                self.__move(path+z, new_path[6])
+            if x[1] not in exclude:
+                if x[1] in self.text_extension:
+                    self.__move(path+z, new_path[0])
+                elif x[1] in self.image_extension:
+                    self.__move(path+z, new_path[1])
+                elif x[1] in self.audio_extension:
+                    self.__move(path+z, new_path[2])
+                elif x[1] in self.markup_extension:
+                    self.__move(path+z, new_path[3])
+                elif x[1] in self.video_extension:
+                    self.__move(path+z, new_path[4])
+                elif x[1] in self.spread_sheet_extension:
+                    self.__move(path+z, new_path[5])
+                elif x[1] in self.power_point_extension:
+                    self.__move(path+z, new_path[6])
+                else:
+                    self.__move(path+z, new_path[7])
 
 
 class HandleTempFiles(FilesManager):
@@ -140,12 +156,21 @@ class HandleTempFiles(FilesManager):
             print(e)
             self.log_action(e)
 
-    def delete_temp_files(self):
+    def delete_temp_files(self, paths: list):
+        print(paths)
         days = int(input("How old files to be deleted (days): \n"))
-        paths = self.temporary_dirs
+        flag = input(
+            "Do you want to exclude any file type to be deleted (Y/N)?").lower()
+        if flag == "y" or flag == "yes":
+            exclusion = input(
+                "Enter the file extension type(s) you want to exclude:\n")
+            exclusion = re.split('\s|,', exclusion)
+        else:
+            exclusion = False
+        # paths = self.temporary_dirs
         # paths = ["E:/Rajib/Python/learn python/Automation/dummy folder/Text Files/"]
         for path in paths:
-            old_file_path = self.get_old_files(path, days)
+            old_file_path = self.get_old_files(path, days, exclusion)
             if len(old_file_path) == 0:
                 print("No Files to be deleted")
             else:
@@ -175,13 +200,13 @@ class HandleTempFiles(FilesManager):
 
 
 start = time.time()
-# file = OrganizeFiles(
-#     ["E:/Rajib/Python/learn python/Automation/dummy folder/", "E:/Music/"])
-# print(file.manage_by_extension(
-#     "E:/Rajib/Python/learn python/Automation/dummy folder/"))
+file = OrganizeFiles(
+    ["E:/Rajib/Python/learn python/Automation/dummy folder/", "E:/Music/"])
+print(file.manage_by_extension(
+    "E:/Rajib/Python/learn python/Automation/dummy folder/"))
 
-file2 = HandleTempFiles()
-file2.delete_temp_files()
-
+# file2 = HandleTempFiles()
+# file2.delete_temp_files(
+#     ["E:\\Rajib\\Python\\learn python\\Automation\\dummy folder\\Miscellenous\\"])
 end = time.time()
 print(end-start)
