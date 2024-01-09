@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import time
+import numpy as np
 
 
 class FilesManager():
@@ -43,23 +44,24 @@ class FilesManager():
 
     def get_old_files(self, path, days, exclusion=False):
         old_files = []
-        print("path: "+path)
-        files = glob.glob(path+'*')
-        print("files: ", files)
+        files = np.array(glob.glob(path+'*'))
         if exclusion:
             for exclude in exclusion:
                 files = list(set(files)-set(glob.glob(f'{path}*.{exclude}')))
+        # print(files)
         for file in files:
             c = glob.glob(f'{path}logs')
             if file not in c:
                 time_in_days, time_in_hours = self.get_timediff(file)
+                # print(file, time_in_days)
                 if time_in_days > days:
                     old_files.append(file)
+        # print(old_files)
         return old_files
 
     def get_extension(self, path):
         extension = []
-        files = os.listdir(path)
+        files = np.array(os.listdir(path))
         for file in files:
             if os.path.isfile(path+file):
                 base, extend = os.path.splitext(file)
@@ -78,9 +80,8 @@ class FilesManager():
             os.mkdir(log_path)
             info = f'{log_path} Created'
             self.log_action(info)
-        log_file = open(f'{log_path}/{log_file_name}', '+a')
-        log_file.write(f'{info}'+"\n")
-        log_file.close()
+        with open(f'{log_path}/{log_file_name}', '+a', encoding='utf-8') as log_file:
+            log_file.write(f'{info}'+"\n")
 
 
 class OrganizeFiles(FilesManager):
@@ -106,7 +107,7 @@ class OrganizeFiles(FilesManager):
                     'Markup Files', 'Video Files', 'Spread Sheets', 'Powerpoint Files', "Miscellenous"]
         flag = input(
             "\nDo you want to exclude any file type(s) to organize(Y/N): ").lower()
-        if flag == "y" or flag == 'YES':
+        if flag in ('y', "yes"):
             exclude = input("\nEnter extension you want to exclude: ")
             exclude = re.split('\s|,', exclude)
             for i in range(len(exclude)):
@@ -142,71 +143,68 @@ class OrganizeFiles(FilesManager):
 
 
 class HandleTempFiles(FilesManager):
+
     def __delete(self, info, old_file, type):
         try:
             if type == 'file':
                 os.remove(old_file)
             elif type == 'directory':
-                if (len(os.listdir(old_file)) == 0):
+                if len(os.listdir(old_file)) == 0:
                     os.rmdir(old_file)
+                    self.log_action(info)
                 else:
                     shutil.rmtree(old_file)
-            self.log_action(info)
+                    info = f'Files and Sub directory in {old_file} is deleted'
+                    self.log_action(info)
         except OSError as e:
             print(e)
             self.log_action(e)
 
-    def delete_temp_files(self, paths: list):
-        print(paths)
+    def delete_temp_files(self):
         days = int(input("How old files to be deleted (days): \n"))
         flag = input(
             "Do you want to exclude any file type to be deleted (Y/N)?").lower()
-        if flag == "y" or flag == "yes":
+        if flag in ("y", "yes"):
             exclusion = input(
                 "Enter the file extension type(s) you want to exclude:\n")
             exclusion = re.split('\s|,', exclusion)
         else:
             exclusion = False
-        # paths = self.temporary_dirs
+        paths = self.temporary_dirs
         # paths = ["E:/Rajib/Python/learn python/Automation/dummy folder/Text Files/"]
-        for path in paths:
-            old_file_path = self.get_old_files(path, days, exclusion)
-            if len(old_file_path) == 0:
-                print("No Files to be deleted")
+        old_file = [self.get_old_files(
+            path, days, exclusion) for path in paths]
+        old_file_path = np.array([])
+        for old in old_file:
+            old_file_path = np.append(old_file_path, old)
+        print(old_file_path)
+        if len(old_file_path) == 0:
+            print("No Files to be deleted")
+        else:
+            print("Files being deleted\n")
+        self.print_old_files(old_file_path)
+        temp = old_file_path.copy()
+        while len(temp) > 0:
+            confirm = input(
+                "\nDo you wand to delete these files (Y/N)\n").upper()
+            if confirm in ("Y", "YES"):
+                for old_file in old_file_path:
+                    info = f'{old_file} is deleted'
+                    if os.path.isfile(old_file):
+                        self.__delete(info, old_file, "file")
+                    elif os.path.isdir(old_file):
+                        self.__delete(info, old_file, "directory")
+                    temp = np.delete(temp, 0)
+                print("Files Successfully Deleted in :")
+            elif confirm in ('N', "NO"):
+                print("Action Cancelled!!!\n")
+                break
             else:
-                print("Files being deleted\n")
-            self.print_old_files(old_file_path)
-            temp = old_file_path.copy()
-            while len(temp) > 0:
-                confirm = input(
-                    "\nDo you wand to delete these files (Y/N)\n").upper()
-                if (confirm == "Y" or confirm == "YES"):
-                    for old_file in old_file_path:
-                        info = f'{old_file} is deleted'
-                        if os.path.isfile(old_file):
-                            self.__delete(info, old_file, "file")
-                        elif os.path.isdir(old_file):
-                            if len(os.listdir(old_file)) == 0:
-                                self.__delete(info, old_file, "directory")
-                            else:
-                                info = f'Files and Sub directory in {old_file} Deleted'
-                                self.__delete(info, old_file, "directory")
-                        temp.pop(0)
-                elif confirm == "N" or confirm == "NO":
-                    print("Action Cancelled!!!\n")
-                    break
-                else:
-                    print("Invalid option.\n")
+                print("Invalid option.\n")
 
 
 start = time.time()
-file = OrganizeFiles(
-    ["E:/Rajib/Python/learn python/Automation/dummy folder/", "E:/Music/"])
-print(file.manage_by_extension(
-    "E:/Rajib/Python/learn python/Automation/dummy folder/"))
-
-# file2 = HandleTempFiles()
-# file2.delete_temp_files(
-#     ["E:\\Rajib\\Python\\learn python\\Automation\\dummy folder\\Miscellenous\\"])
+files = HandleTempFiles()
+files.delete_temp_files()
 end = time.time()
-print(end-start)
+print(f"{end - start}sec")
