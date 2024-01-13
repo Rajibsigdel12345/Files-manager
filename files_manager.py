@@ -152,9 +152,8 @@ class OrganizeFiles(FilesManager):
                 if ext in extensions_list:
                     destination_folder = os.path.join(path, new_path[i])
                     break
-                else:
-                    destination_folder = os.path.join(path, new_path[-1])
-                    break
+
+                destination_folder = os.path.join(path, new_path[-1])
 
             if destination_folder is not None:
                 self.__move(file_path, destination_folder)
