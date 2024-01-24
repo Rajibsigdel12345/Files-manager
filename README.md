@@ -26,6 +26,7 @@ path = "/path/to/directory"
 
 # Create an instance of the OrganizeFiles class
 organizer = OrganizeFiles()
+organizer.manage_by_extension(path)
 ```
 ### Explanation
  - Import the OrganizeFiles class: Import the OrganizeFiles class from the files_manager library.
